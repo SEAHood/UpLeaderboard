@@ -2,18 +2,11 @@
   "disabled": false,
   "bindings": [
     {
-      "name": "inBlob",
+      "name": "leaderboard",
       "type": "blob",
       "path": "leaderboards/leaderboard.json",
       "connection": "AzureWebJobsStorage",
-      "direction": "in"
-    },
-    {
-      "name": "outBlob",
-      "type": "blob",
-      "path": "leaderboards/leaderboard.json",
-      "connection": "AzureWebJobsStorage",
-      "direction": "out"
+      "direction": "inout"
     }
   ]
 }
