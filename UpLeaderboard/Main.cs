@@ -52,7 +52,10 @@ namespace UpLeaderboard
                         leaderboardJson = await leaderboardBlob.DownloadTextAsync();
                         break;
                     case "post":
-                        dynamic data = JsonConvert.DeserializeObject(await req.ReadAsStringAsync());
+                        var reqBody = await req.ReadAsStringAsync();
+                        log.LogInformation($"Received POST payload: {reqBody}");
+
+                        dynamic data = JsonConvert.DeserializeObject(reqBody);
                         var name = (string)data.name;
                         var score = (string)data.score;
                         if (name == null || score == null || name == "" || !int.TryParse(score, out var scoreInt)) 
