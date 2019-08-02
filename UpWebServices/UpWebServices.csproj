@@ -16,7 +16,4 @@
       <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
   </ItemGroup>
-  <Target AfterTargets="Build" Name="CopyExtensions">
-    <Copy SourceFiles="extensions.json" DestinationFolder="$(OutputPath)\bin" ContinueOnError="true" />
-  </Target>
 </Project>
