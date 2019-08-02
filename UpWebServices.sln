@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2035
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UpLeaderboard", "UpLeaderboard\UpLeaderboard.csproj", "{78A867BA-B0A3-45AC-A71E-B6EF56842B88}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UpWebServices", "UpWebServices\UpWebServices.csproj", "{78A867BA-B0A3-45AC-A71E-B6EF56842B88}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
