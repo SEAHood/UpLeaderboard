@@ -21,5 +21,7 @@ namespace UpWebServices
         public int PersonalBest { get; set; }
 
         public DateTime PersonalBestTimestamp { get; set; }
+
+        public string PersonalBestToken { get; set; }
     }
 }

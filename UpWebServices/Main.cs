@@ -53,6 +53,7 @@ namespace UpWebServices
             Username = account.RowKey;
             PersonalBest = account.PersonalBest;
             PersonalBestTimestamp = account.PersonalBestTimestamp;
+            PersonalBestToken = account.PersonalBestToken;
         }
 
         [JsonProperty("username")]
@@ -63,6 +64,9 @@ namespace UpWebServices
 
         [JsonProperty("pbTime")]
         public DateTime PersonalBestTimestamp { get; set; }
+
+        [JsonProperty("pbToken")]
+        public string PersonalBestToken { get; set; }
     }
 
     public static class Main
@@ -84,63 +88,7 @@ namespace UpWebServices
 
             return new BadRequestResult();
         }
-
-        private static async Task<IActionResult> DoPostLeaderboard(HttpRequest req, Repo repo, ILogger log)
-        {
-            try
-            {
-                string username;
-                string password;
-                int? personalBest;
-                using (var reader = new StreamReader(req.Body, Encoding.UTF8))
-                {
-                    var reqString = reader.ReadToEnd();
-                    var credCheck = GetCredentialsFromRequest(reqString, out username, out password);
-                    if (credCheck == false)
-                        return new BadRequestResult();
-
-                    var pbCheck = GetPersonalBestFromRequest(reqString, out personalBest);
-                    if (pbCheck == false || !personalBest.HasValue)
-                        return new BadRequestResult();
-                }
-
-                var account = await repo.GetAccount(username);
-                if (account == null || !HashHelper.Verify(password, account.Password))
-                    return new UnauthorizedResult();
-
-                account.PersonalBest = personalBest.Value;
-                account.PersonalBestTimestamp = DateTime.Now;
-
-                await repo.UpdateAccount(account);
-
-                var response = new OkObjectResult(new Account(account));
-                response.ContentTypes.Add("application/json");
-                return response;
-            }
-            catch (Exception e)
-            {
-                log.LogError(e.Message, e);
-                return new InternalServerErrorResult();
-            }
-        }
-
-        private static async Task<IActionResult> DoGetLeaderboard(Repo repo, ILogger log)
-        {
-            try
-            {
-                var accounts = await repo.GetAccounts();
-                var response = new OkObjectResult(new Leaderboard(accounts));
-                response.ContentTypes.Add("application/json");
-                return response;
-            }
-            catch (Exception e)
-            {
-                log.LogError(e.Message, e);
-                return new InternalServerErrorResult();
-            }
-        }
-
-
+        
         [FunctionName("Signup")]
         public static async Task<IActionResult> SignupHandler(
             [HttpTrigger(AuthorizationLevel.Function, "post", Route = "signup")] HttpRequest req,
@@ -160,36 +108,54 @@ namespace UpWebServices
             return await DoLogin(req, storageAccount, log);
         }
 
-        private static async Task<IActionResult> DoLeaderboard(HttpRequest req, CloudStorageAccount storageAccount, ILogger log)
+        private static async Task<IActionResult> DoPostLeaderboard(HttpRequest req, Repo repo, ILogger log)
         {
             try
             {
-                var client = storageAccount.CreateCloudBlobClient();
-                var container = client.GetContainerReference("leaderboards");
-                await container.CreateIfNotExistsAsync();
-
-                var leaderboardBlob = container.GetBlockBlobReference("leaderboard.json");
-                var leaderboardJson = "";
-
-                switch (req.Method.ToLower())
+                string username;
+                //string password;
+                int? personalBest;
+                string personalBestToken;
+                using (var reader = new StreamReader(req.Body, Encoding.UTF8))
                 {
-                    case "get":
-                        leaderboardJson = await leaderboardBlob.DownloadTextAsync();
-                        break;
-                    case "post":
-                        var reqBody = await req.ReadAsStringAsync();
-                        log.LogInformation($"Received POST payload: {reqBody}");
+                    var reqString = reader.ReadToEnd();
+                    var userCheck = GetUsernameFromRequest(reqString, out username);
+                    if (userCheck == false)
+                        return new BadRequestResult();
 
-                        dynamic data = JsonConvert.DeserializeObject(reqBody);
-                        var name = (string)data.name;
-                        var score = (string)data.score;
-                        if (name == null || score == null || name == "" || !int.TryParse(score, out var scoreInt))
-                            return new BadRequestResult();
-                        leaderboardJson = await PostScore(leaderboardBlob, name, scoreInt, log);
-                        break;
+                    var pbCheck = GetPersonalBestFromRequest(reqString, out personalBest, out personalBestToken);
+                    if (pbCheck == false || !personalBest.HasValue)
+                        return new BadRequestResult();
                 }
 
-                var response = new OkObjectResult(leaderboardJson);
+                var account = await repo.GetAccount(username);
+                if (account == null || personalBestToken != account.PersonalBestToken)
+                    return new UnauthorizedResult();
+
+                account.PersonalBest = personalBest.Value;
+                account.PersonalBestTimestamp = DateTime.Now;
+
+                await repo.UpdateAccount(account);
+
+                log.LogInformation($"{account.Username} GOT A PERSONAL BEST: {account.PersonalBest}");
+
+                var response = new OkObjectResult(new Account(account));
+                response.ContentTypes.Add("application/json");
+                return response;
+            }
+            catch (Exception e)
+            {
+                log.LogError(e.Message, e);
+                return new InternalServerErrorResult();
+            }
+        }
+
+        private static async Task<IActionResult> DoGetLeaderboard(Repo repo, ILogger log)
+        {
+            try
+            {
+                var accounts = await repo.GetAccounts();
+                var response = new OkObjectResult(new Leaderboard(accounts));
                 response.ContentTypes.Add("application/json");
                 return response;
             }
@@ -223,6 +189,7 @@ namespace UpWebServices
                 };
                 await repo.CreateAccount(account);
 
+                log.LogInformation($"{account.Username} CREATED AN ACCOUNT");
                 var response = new OkObjectResult(new Account(account));
                 response.ContentTypes.Add("application/json");
                 return response;
@@ -262,7 +229,11 @@ namespace UpWebServices
                 var account = await repo.GetAccount(username);
                 if (account == null || !HashHelper.Verify(password, account.Password))
                     return new UnauthorizedResult();
+                
+                account.PersonalBestToken = Guid.NewGuid().ToString();
+                await repo.UpdateAccount(account);
 
+                log.LogInformation($"{account.Username} LOGGED IN");
                 var response = new OkObjectResult(new Account(account));
                 response.ContentTypes.Add("application/json");
                 return response;
@@ -287,16 +258,30 @@ namespace UpWebServices
             password = body["password"];
             return true;
         }
-        
-        private static bool GetPersonalBestFromRequest(string req, out int? personalBest)
-        {
-            personalBest = null;
-            var body = JsonConvert.DeserializeObject<dynamic>(req);
 
-            if (body["personalBest"] == null)
+        private static bool GetUsernameFromRequest(string req, out string username)
+        {
+            username = null;
+
+            var body = JsonConvert.DeserializeObject<dynamic>(req);
+            if (body["username"] == null)
                 return false;
 
-            personalBest = body["personalBest"];
+            username = body["username"];
+            return true;
+        }
+
+        private static bool GetPersonalBestFromRequest(string req, out int? personalBest, out string personalBestToken)
+        {
+            personalBest = null;
+            personalBestToken = null;
+            var body = JsonConvert.DeserializeObject<dynamic>(req);
+
+            if (body["pb"] == null || body["pbToken"] == null)
+                return false;
+
+            personalBest = body["pb"];
+            personalBestToken = body["pbToken"];
             return true;
         }
 

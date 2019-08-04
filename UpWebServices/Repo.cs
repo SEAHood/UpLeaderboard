@@ -32,6 +32,7 @@ namespace UpWebServices
 
                     foreach (var account in resultSegment.Results)
                     {
+                        account.PersonalBestToken = null; // Don't want to expose this
                         accounts.Add(account);
                     }
                 } while (token != null);
