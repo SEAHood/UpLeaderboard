@@ -121,23 +121,32 @@ namespace UpWebServices
                     var reqString = reader.ReadToEnd();
                     var userCheck = GetUsernameFromRequest(reqString, out username);
                     if (userCheck == false)
+                    {
+                        log.LogInformation("PB was null");
                         return new BadRequestResult();
+                    }
 
                     var pbCheck = GetPersonalBestFromRequest(reqString, out personalBest, out personalBestToken);
                     if (pbCheck == false || !personalBest.HasValue)
+                    {
+                        log.LogInformation("PB was null");
                         return new BadRequestResult();
+                    }
                 }
 
                 var account = await repo.GetAccount(username);
                 if (account == null || personalBestToken != account.PersonalBestToken)
+                {
+                    log.LogInformation("PB token mismatch");
                     return new UnauthorizedResult();
+                }
 
                 account.PersonalBest = personalBest.Value;
                 account.PersonalBestTimestamp = DateTime.Now;
 
                 await repo.UpdateAccount(account);
 
-                log.LogInformation($"{account.Username} GOT A PERSONAL BEST: {account.PersonalBest}");
+                log.LogInformation($"New PB: {account.Username} - {account.PersonalBest}");
 
                 var response = new OkObjectResult(new Account(account));
                 response.ContentTypes.Add("application/json");
@@ -154,6 +163,7 @@ namespace UpWebServices
         {
             try
             {
+                log.LogInformation("Fetching leaderboard");
                 var accounts = await repo.GetAccounts();
                 var response = new OkObjectResult(new Leaderboard(accounts));
                 response.ContentTypes.Add("application/json");
