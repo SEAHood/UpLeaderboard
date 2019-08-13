@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.WindowsAzure.Storage;
 using Microsoft.WindowsAzure.Storage.Blob;
-using Microsoft.WindowsAzure.Storage.Table;
 using Newtonsoft.Json;
 
 namespace UpWebServices
@@ -23,6 +22,7 @@ namespace UpWebServices
         {
             Scores = accounts
                 .OrderByDescending(a => a.PersonalBest)
+                .Where(a => a.PersonalBest > 0)
                 .Select(a => new PlayerScore()
                 {
                     Name = a.Username,
