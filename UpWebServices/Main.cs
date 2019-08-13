@@ -113,7 +113,6 @@ namespace UpWebServices
             try
             {
                 string username;
-                //string password;
                 int? personalBest;
                 string personalBestToken;
                 using (var reader = new StreamReader(req.Body, Encoding.UTF8))
@@ -264,7 +263,7 @@ namespace UpWebServices
             if (body["username"] == null || body["password"] == null)
                 return false;
 
-            username = body["username"];
+            username = ((string)body["username"]).ToLowerInvariant();
             password = body["password"];
             return true;
         }
@@ -277,7 +276,7 @@ namespace UpWebServices
             if (body["username"] == null)
                 return false;
 
-            username = body["username"];
+            username = ((string)body["username"]).ToLowerInvariant();
             return true;
         }
 
