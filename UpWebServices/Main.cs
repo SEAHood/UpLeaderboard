@@ -77,6 +77,12 @@ namespace UpWebServices
             [StorageAccount("AzureWebJobsStorage")] CloudStorageAccount storageAccount,
             ILogger log)
         {
+            if (!ValidateVersion(req))
+            {
+                log.LogInformation("Wrong version!");
+                return new NotFoundResult(); // TODO: At some point change this so it's bad request with a message
+            }
+
             var repo = new Repo(storageAccount);
             switch (req.Method.ToUpper())
             {
@@ -95,9 +101,13 @@ namespace UpWebServices
             [StorageAccount("AzureWebJobsStorage")] CloudStorageAccount storageAccount,
             ILogger log)
         {
+            if (!ValidateVersion(req))
+            {
+                log.LogInformation("Wrong version!");
+                return new NotFoundResult(); // TODO: At some point change this so it's bad request with a message
+            }
             return await DoSignup(req, storageAccount, log);
         }
-
 
         [FunctionName("Login")]
         public static async Task<IActionResult> LoginHandler(
@@ -105,6 +115,11 @@ namespace UpWebServices
             [StorageAccount("AzureWebJobsStorage")] CloudStorageAccount storageAccount,
             ILogger log)
         {
+            if (!ValidateVersion(req))
+            {
+                log.LogInformation("Wrong version!");
+                return new NotFoundResult(); // TODO: At some point change this so it's bad request with a message
+            }
             return await DoLogin(req, storageAccount, log);
         }
 
@@ -118,6 +133,7 @@ namespace UpWebServices
                 using (var reader = new StreamReader(req.Body, Encoding.UTF8))
                 {
                     var reqString = reader.ReadToEnd();
+
                     var userCheck = GetUsernameFromRequest(reqString, out username);
                     if (userCheck == false)
                     {
@@ -254,6 +270,12 @@ namespace UpWebServices
             }
         }
 
+        private static bool ValidateVersion(HttpRequest req)
+        {
+            var versionHeader = (string)req.Headers["UpMetadata-Version"];
+            return versionHeader != null && versionHeader == "0.2";
+        }
+        
         private static bool GetCredentialsFromRequest(string req, out string username, out string password)
         {
             username = null;
