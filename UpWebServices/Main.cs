@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Web.Http;
@@ -16,61 +15,10 @@ using Newtonsoft.Json;
 
 namespace UpWebServices
 {
-    public class Leaderboard
-    {
-        public Leaderboard(IEnumerable<AccountEntity> accounts)
-        {
-            Scores = accounts
-                .OrderByDescending(a => a.PersonalBest)
-                .Where(a => a.PersonalBest > 0)
-                .Select(a => new PlayerScore()
-                {
-                    Name = a.Username,
-                    Score = a.PersonalBest,
-                    Timestamp = a.PersonalBestTimestamp
-                })
-                .ToList();
-        }
-
-        [JsonProperty("scores")]
-        public List<PlayerScore> Scores { get; set; }
-    }
-
-    public class PlayerScore
-    {
-        [JsonProperty("name")]
-        public string Name { get; set; }
-        [JsonProperty("score")]
-        public int Score { get; set; }
-        [JsonProperty("timestamp")]
-        public DateTime Timestamp { get; set; }
-    }
-
-    public class Account
-    {
-        public Account(AccountEntity account)
-        {
-            Username = account.RowKey;
-            PersonalBest = account.PersonalBest;
-            PersonalBestTimestamp = account.PersonalBestTimestamp;
-            PersonalBestToken = account.PersonalBestToken;
-        }
-
-        [JsonProperty("username")]
-        public string Username { get; set; }
-
-        [JsonProperty("pb")]
-        public int PersonalBest { get; set; }
-
-        [JsonProperty("pbTime")]
-        public DateTime PersonalBestTimestamp { get; set; }
-
-        [JsonProperty("pbToken")]
-        public string PersonalBestToken { get; set; }
-    }
-
     public static class Main
     {
+        private const string GameVersion = "0.3";
+
         [FunctionName("Leaderboard")]
         public static async Task<IActionResult> LeaderboardHandler(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "leaderboard")] HttpRequest req,
@@ -121,6 +69,14 @@ namespace UpWebServices
                 return new NotFoundResult(); // TODO: At some point change this so it's bad request with a message
             }
             return await DoLogin(req, storageAccount, log);
+        }
+
+        [FunctionName("Version")]
+        public static IActionResult VersionHandler(
+            [HttpTrigger(AuthorizationLevel.Function, "get", Route = "version")] HttpRequest req,
+            ILogger log)
+        {
+            return new OkObjectResult(GameVersion);
         }
 
         private static async Task<IActionResult> DoPostLeaderboard(HttpRequest req, Repo repo, ILogger log)
@@ -273,7 +229,7 @@ namespace UpWebServices
         private static bool ValidateVersion(HttpRequest req)
         {
             var versionHeader = (string)req.Headers["UpMetadata-Version"];
-            return versionHeader != null && versionHeader == "0.2";
+            return versionHeader != null && versionHeader == GameVersion;
         }
         
         private static bool GetCredentialsFromRequest(string req, out string username, out string password)
