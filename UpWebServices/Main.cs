@@ -17,7 +17,7 @@ namespace UpWebServices
 {
     public static class Main
     {
-        private const string GameVersion = "0.3";
+        private const string GameVersion = "0.4";
 
         [FunctionName("Leaderboard")]
         public static async Task<IActionResult> LeaderboardHandler(
